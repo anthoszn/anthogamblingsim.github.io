@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Battle Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'League Spartan', sans-serif;
+      text-align: center;
+      padding: 50px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    .button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 15px 32px;
+      font-size: 18px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .button:hover {
+      background-color: #45a049;
+    }
+    .button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    /* New styling for the real roll button to center it and make it larger */
+    #rollButton {
+      display: block;
+      margin: 20px auto;
+      font-size: 24px;
+      padding: 20px 40px;
+    }
+    /* New styling for the haunted button */
+    .haunted-button {
+      background-color: #660099;
+    }
+    .haunted-button:hover {
+      background-color: #4d0066;
+    }
+    /* New styling for the auto-roll button */
+    .auto-roll-button {
+      background-color: #ff9800;
+    }
+    .auto-roll-button:hover {
+      background-color: #e68900;
+    }
+    /* Styling for stop auto roll button */
+    #stopAutoRollButton {
+      display: none; /* Hidden by default, shown when auto-roll active */
+      background-color: #ff0000;
+    }
+    #stopAutoRollButton:hover {
+      background-color: #cc0000;
+    }
+    .roll-result {
+      font-size: 24px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .total-luck {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .total-rolls {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .case-items {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 30px;
+      font-size: 18px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .case-items li {
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      width: 300px;
+      position: relative;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      margin: 5px 0;
+    }
+    /* Tooltip styling for luck multiplier (above) and description (below) */
+    .luck-multiplier {
+      display: none;
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      z-index: 10;
+      margin-bottom: 5px;
+    }
+    .item-description {
+      display: none;
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      z-index: 10;
+      margin-top: 5px;
+    }
+    .stat-item:hover .luck-multiplier,
+    .stat-item:hover .item-description {
+      display: block;
+    }
+    /* Rarity colors for standard items */
+    .mythical { color: red; }
+    .legendary { color: yellow; }
+    .epic { color: purple; }
+    .rare { color: blue; }
+    .uncommon { color: orange; }
+    .common { color: gray; }
+    .secret { color: black; font-weight: bold; text-shadow: 0 0 10px black; }
+    /* Haunted items styling: dark purple background with white text */
+    .haunted {
+      color: white;
+      background-color: #4B0082; /* dark purple */
+      border-color: #4B0082;
+    }
+    /* Glow effects for rolling area */
+    .glow-mythical { background: red; box-shadow: 0 0 30px red; }
+    .glow-legendary { background: yellow; box-shadow: 0 0 30px yellow; }
+    .glow-epic { background: purple; box-shadow: 0 0 30px purple; }
+    .glow-rare { background: blue; box-shadow: 0 0 30px blue; }
+    .glow-uncommon { background: orange; box-shadow: 0 0 30px orange; }
+    .glow-common { background: gray; box-shadow: 0 0 30px gray; }
+    .glow-secret { background: black; box-shadow: 0 0 30px black; }
+    /* Spooky glow for haunted rolls */
+    .glow-haunted { background: #330033; box-shadow: 0 0 30px #330033; }
+    .rolling-area {
+      padding: 20px;
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      transition: all 1s ease;
+    }
+    .rare-effect {
+      animation: rareEffect 1s ease-in-out;
+    }
+    @keyframes rareEffect {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <h1>antho's gambling simulator (so cool!)</h1>
+  <div class="total-luck" id="totalLuck">Total Luck: 0</div>
+  <div class="total-rolls" id="totalRolls">Total Rolls: 0</div>
+  <!-- Standard roll button -->
+  <button id="rollButton" class="button">roll</button>
+  <!-- Haunted case button (costs 150 luck per roll) -->
+  <button id="hauntedRollButton" class="button haunted-button">Haunted Roll (150 Luck)</button>
+  <!-- Auto roll system button (costs 250 luck to activate) -->
+  <button id="autoRollButton" class="button auto-roll-button">Buy Auto Roll (250 Luck)</button>
+  <!-- Stop auto roll button -->
+  <button id="stopAutoRollButton" class="button haunted-button" style="display:none;">Stop Auto Roll</button>
+  <div id="rollingArea" class="rolling-area">
+    <div class="roll-result" id="rollResult"></div>
+    <div id="chanceAndLuck" class="roll-result"></div>
+  </div>
+  <h3>Inventory</h3>
+  <ul class="case-items" id="caseItems"></ul>
+  
+  <script>
+    // Standard loot pool
+    let rollItems = [
+      { name: 'Po Po', chance: 0.0000001, luckMultiplier: 694200, rarity: 'Secret', description: 'po po tou ngo' },
+      { name: 'Frostbite', chance: 0.00005, luckMultiplier: 17500, rarity: 'Mythical', description: 'A chilling touch that leaves its mark.' },
+      { name: 'Water Bottle', chance: 0.00008, luckMultiplier: 12345.6, rarity: 'Mythical', description: 'agua' },
+      { name: 'Whopper', chance: 0.0001, luckMultiplier: 9999, rarity: 'Legendary', description: 'yummers' },
+      { name: 'smelly pile of poo', chance: 0.00069, luckMultiplier: 6969, rarity: 'Legendary', description: 'who could ever forget' },
+      { name: 'Steamer', chance: 0.004, luckMultiplier: 888, rarity: 'Legendary', description: 'the steam is here' },
+      { name: 'Goner', chance: 0.05, luckMultiplier: 102.345, rarity: 'Legendary', description: 'huzzah gooner' },
+      { name: 'Vadhnak Gem', chance: 0.01, luckMultiplier: 169.5, rarity: 'Legendary', description: '#vadhnak so cool hah' },
+      { name: 'Ion', chance: 0.06, luckMultiplier: 101.010, rarity: 'Legendary', description: 'Charged with an electrifying personality.' },
+      { name: 'Starlight', chance: 0.1, luckMultiplier: 89, rarity: 'Epic', description: 'A twinkle from the cosmos in your hand.' },
+      { name: 'Diamond', chance: 0.3, luckMultiplier: 50, rarity: 'Epic', description: 'Shining bright like the finest diamond.' },
+      { name: 'Sapphire', chance: 0.5, luckMultiplier: 22.2222, rarity: 'Epic', description: 'Deep and mysterious as the midnight sea.' },
+      { name: 'Emerald', chance: 1, luckMultiplier: 11.1, rarity: 'Rare', description: 'A vivid gem that exudes rare elegance.' },
+      { name: 'Ruby', chance: 1, luckMultiplier: 9, rarity: 'Rare', description: 'Glowing with the intensity of passion.' },
+      { name: 'Obsidian', chance: 3, luckMultiplier: 7, rarity: 'Rare', description: 'Dark and striking, forged in fire.' },
+      { name: 'Jade', chance: 4, luckMultiplier: 5, rarity: 'Rare', description: 'Smooth and timeless, with a subtle charm.' },
+      { name: 'Quartz', chance: 5, luckMultiplier: 3, rarity: 'Uncommon', description: 'A clear crystal with a touch of magic.' },
+      { name: 'Gold', chance: 5, luckMultiplier: 2.5, rarity: 'Uncommon', description: 'The classic treasure sought by many.' },
+      { name: 'Iron', chance: 15, luckMultiplier: 1.2, rarity: 'Uncommon', description: 'Sturdy and reliable, always in demand.' },
+      { name: 'Crystal', chance: 15, luckMultiplier: 1.1, rarity: 'Common', description: 'Simple yet captivating in its clarity.' },
+      { name: 'White Gems', chance: 20, luckMultiplier: 0.5, rarity: 'Common', description: 'Subtle elegance in pure white.' },
+      { name: 'Stone', chance: 29.7, luckMultiplier: 0.5, rarity: 'Common', description: 'The foundation of many treasures.' },
+      { name: 'Lunar', chance: 0.085, luckMultiplier: 90, rarity: 'Legendary', description: 'visca barca' },
+      { name: 'Solar', chance: 0.15, luckMultiplier: 65, rarity: 'Epic', description: 'oww my eyes' },
+      { name: 'Eclipse', chance: 0.0055, luckMultiplier: 777, rarity: 'Legendary', description: 'OWW MY EYES AGAIN'  },
+      { name: 'Uranium', chance: 0.000075, luckMultiplier: 15000, rarity: 'Mythical', description: 'did you know that uranium has about 3.5 million calories per gram'  },
+      { name: 'Grungy', chance: 0.00000055, luckMultiplier: 12345678, rarity: 'Secret', description: 'no one is ever getting this trust me'  },
+      // New items
+      { name: 'Opal', chance: 0.35, luckMultiplier: 25, rarity: 'Epic', description: 'oppa!'  },
+      { name: 'Cobalt', chance: 0.065, luckMultiplier: 50, rarity: 'Legendary', description: 'beautiful blue'  },
+      { name: 'Pi', chance: 0.00075, luckMultiplier: 314.1592653589, rarity: 'Legendary', description: 'just round it to three at this point'  },
+      { name: 'Hyperpigmentation', chance: 0.0000045, luckMultiplier: 69420, rarity: 'Mythical', description: 'hyperpigmentation ???'  },
+      { name: 'Gwa', chance: 0.000001, luckMultiplier: 66969, rarity: 'Secret', description: 'gwa roll or something idk jayden made me add this'  },
+      // Left Hand
+      { name: 'Left Hand', chance: 0.1234, luckMultiplier: 35.25, rarity: 'Epic', description: 'with this treasure, i summon a left hand...'  },
+      
+      { name: 'Neon Elemental', chance: 0.09, luckMultiplier: 54.5, rarity: 'Legendary', description: 'thats so neon elemental'  },
+      { name: 'Im sorry, dont leave me, I want you here with me I know that your love is gone I cant breathe, Im so weak, I know this isnt easy Dont tell me that your love is gone That your love is gone', chance: 0.09, luckMultiplier: 69, rarity: 'Legendary', description: 'i dont know what you want'  },
+      { name: 'Jack oh meal', chance: 0.005, luckMultiplier: 66, rarity: 'Legendary', description: 'no jacko without a meal'  },
+      // Newly added items
+      { name: 'Hollow Purple', chance: 0.00029, luckMultiplier: 475, rarity: 'Legendary', description: 'HOLLOW PURPLE'  },
+      { name: 'rickson ridgium', chance: 0.1111, luckMultiplier: 54.42, rarity: 'Epic', description: 'definitely not a location of interest'  },
+      { name: 'Calven', chance: 0.0005, luckMultiplier: 469, rarity: 'Legendary', description: 'eww'  },
+      { name: 'Ben', chance: 0.0005, luckMultiplier: 420.69, rarity: 'Legendary', description: 'ewwer'  },
+      { name: 'Grungy X', chance: 0.0000000015, luckMultiplier: 1222225000, rarity: 'Secret', description: 'as if one grungy was not enough'  },
+      { name: 'peter griffinite', chance: 0.000000001, luckMultiplier: 2123123123510, rarity: 'Secret', description: 'my name is retep, and i am evil >:)'  },
+      // New Secret rarity items
+      { name: 'The Steamed One', chance: 0.000001, luckMultiplier: 2000000, rarity: 'Secret', description: 'he steams you when youre sleeping'  },
+      { name: 'what happened', chance: 0.000002, luckMultiplier: 1500000, rarity: 'Secret', description: 'wuh happen'  },
+      // New items
+      { name: 'nusa???', chance: 0.0001, luckMultiplier: 879, rarity: 'Legendary', description: 'dont even ask'  },
+      { name: 'BROOOO', chance: 0.002763, luckMultiplier: 250, rarity: 'Legendary', description: 'Dude, oh my god, can we talk about the political and economic state of the world right now?'  },
+      { name: 'ununununununium', chance: 0.0000000025, luckMultiplier: 12121212121212, rarity: 'Secret', description: 'wuh happen' },
+      { name: '2 kills 11 deaths with kenji-y', chance: 0.00000211, luckMultiplier: 22111, rarity: 'Mythical', description: 'david why did you do that'  },
+      { name: 'bob', chance: 0.000012, luckMultiplier: 7278, rarity: 'Mythical', description: 'run'  },
+      { name: 'MAN FACE GOD v2', chance: 0.000001, luckMultiplier: 77777, rarity: 'Mythical', description: 'aura egg frfr'  },
+      { name: 'the big 5', chance: 0.0095, luckMultiplier: 99, rarity: 'Legendary', description: 'you know the krab like money' },
+      { name: 'jerry', chance: 0.015, luckMultiplier: 77, rarity: 'Legendary', description: '0 2 180' },
+      { name: 'Johnson', chance: 0.0042, luckMultiplier: 420, rarity: 'Legendary', description: 'who let this guy in' },
+      { name: 'Evolving Skies', chance: 0.0015, luckMultiplier: 999, rarity: 'Legendary', description: 'genuine peak' }
+    ];
+    
+    // Haunted loot pool
+    let hauntedLootItems = [
+      { name: 'Agony', chance: 0.0001, luckMultiplier: 75000, rarity: 'Secret', description: 'pain. FROM THE HAUNTED CASE ' },
+      { name: 'Frostbite Specter', chance: 0.005, luckMultiplier: 23456, rarity: 'Mythical', description: 'Icy and eerie, leaving a spectral chill. FROM THE HAUNTED CASE' },
+      { name: 'Phantom Water Bottle', chance: 0.01, luckMultiplier: 20000, rarity: 'Mythical', description: 'A water bottle possessed by restless spirits. FROM THE HAUNTED CASE' },
+      { name: 'Ghastly Whopper', chance: 0.05, luckMultiplier: 12345, rarity: 'Legendary', description: 'A monstrous twist on a legendary treat. FROM THE HAUNTED CASE' },
+      { name: 'Ivans fart', chance: 0.075, luckMultiplier: 8888, rarity: 'Legendary', description: 'Not even the dead want this smell. FROM THE HAUNTED CASE' },
+      { name: 'Steam of the Abyss', chance: 0.15, luckMultiplier: 4444, rarity: 'Legendary', description: 'An otherworldly steamer from the void. FROM THE HAUNTED CASE' },
+      { name: 'Lost Soul', chance: 0.5, luckMultiplier: 1738, rarity: 'Legendary', description: 'im like hey wassup hello. FROM THE HAUNTED CASE' },
+      { name: 'Cursed Gem', chance: 1, luckMultiplier: 888, rarity: 'Legendary', description: 'A gem imbued with a sinister curse. FROM THE HAUNTED CASE' },
+      { name: 'Ectoplasmic Ion', chance: 3, luckMultiplier: 666, rarity: 'Legendary', description: 'Charged with spectral energy. FROM THE HAUNTED CASE' },
+      { name: 'Stardust', chance: 5, luckMultiplier: 420, rarity: 'Epic', description: 'A fleeting glimpse of cosmic horror. FROM THE HAUNTED CASE' },
+      { name: 'Diamond', chance: 10, luckMultiplier: 250, rarity: 'Epic', description: 'A diamond that glows with ghostly light. FROM THE HAUNTED CASE' },
+      { name: 'Sapphirus', chance: 20, luckMultiplier: 125, rarity: 'Epic', description: 'A blue gem with an eerie presence. FROM THE HAUNTED CASE' },
+      { name: 'Emerald of Fear', chance: 30, luckMultiplier: 99, rarity: 'Rare', description: 'An emerald that seems to vanish in shadows. FROM THE HAUNTED CASE' },
+      { name: 'Ruby Apparition', chance: 30, luckMultiplier: 55, rarity: 'Rare', description: 'A ruby that flickers in the dark. FROM THE HAUNTED CASE' }
+    ];
+    
+    // Sort both pools by chance (ascending)
+    rollItems.sort((a, b) => a.chance - b.chance);
+    hauntedLootItems.sort((a, b) => a.chance - b.chance);
+    
+    let totalLuck = 0;
+    let totalRolls = 0;
+    // Inventory now tracks counts by item name.
+    let inventory = {};
+    const caseItemsList = document.getElementById('caseItems');
+    const totalLuckDisplay = document.getElementById('totalLuck');
+    const totalRollsDisplay = document.getElementById('totalRolls');
+    const rollingArea = document.getElementById('rollingArea');
+    const rollResult = document.getElementById('rollResult');
+    const chanceAndLuck = document.getElementById('chanceAndLuck');
+    const rollButton = document.getElementById('rollButton');
+    const hauntedRollButton = document.getElementById('hauntedRollButton');
+    const autoRollButton = document.getElementById('autoRollButton');
+    const stopAutoRollButton = document.getElementById('stopAutoRollButton');
+    
+    let rolling = false;
+    let autoRollInterval = null; // Holds the interval for auto roll
+    
+    // Updated updateInventory function that sorts items by chance.
+    function updateInventory() {
+      caseItemsList.innerHTML = '';
+
+      // Convert inventory object to an array of objects with name and count.
+      let itemsArray = Object.entries(inventory)
+        .filter(([itemName, count]) => count > 0)
+        .map(([itemName, count]) => {
+          // Find the item in either pool.
+          let item = rollItems.find(x => x.name === itemName);
+          let isHaunted = false;
+          if (!item) {
+            item = hauntedLootItems.find(x => x.name === itemName);
+            isHaunted = true;
+          }
+          return { ...item, count, isHaunted };
+        });
+
+      // Sort items by chance (ascending)
+      itemsArray.sort((a, b) => a.chance - b.chance);
+
+      // Create and append list items for each inventory item.
+      itemsArray.forEach(item => {
+        const cssClass = item.isHaunted ? 'haunted' : item.rarity.toLowerCase();
+        const li = document.createElement('li');
+        li.classList.add('stat-item', cssClass);
+        li.innerHTML = `
+          ${item.name} x${item.count} <span>(Chance: ${item.chance}%)</span>
+          <div class="luck-multiplier">Luck: ${item.luckMultiplier}x</div>
+          <div class="item-description">${item.description || "No description available."}</div>`;
+        caseItemsList.appendChild(li);
+      });
+    }
+    
+    // Fixed performRoll function: calculates the total chance of the chosen pool,
+    // generates a random number, and then picks an item.
+    function performRoll(isHaunted) {
+      let pool = isHaunted ? hauntedLootItems : rollItems;
+      let totalChance = pool.reduce((sum, item) => sum + item.chance, 0);
+      let roll = Math.random() * totalChance;
+      let cumulativeChance = 0;
+      let selectedItem = 'Nothing!';
+      let luckAdded = 0;
+      let itemChance = 0;
+      // Start with the actual rarity from the item. For haunted rolls, we override it below.
+      let itemRarity = '';
+      
+      for (const item of pool) {
+        cumulativeChance += item.chance;
+        if (roll < cumulativeChance) {
+          selectedItem = item.name;
+          luckAdded = item.luckMultiplier || 0;
+          itemChance = Math.round(item.chance * 10) / 10;
+          itemRarity = item.rarity;
+          // Add to inventory using the item's original name
+          inventory[item.name] = (inventory[item.name] || 0) + 1;
+          totalLuck += luckAdded;
+          break;
+        }
+      }
+      
+      // Override rarity for haunted rolls to "Haunted"
+      if (isHaunted) {
+        itemRarity = 'Haunted';
+      }
+      
+      const spookyNote = isHaunted ? " - The spirits have infused your loot..." : "";
+      rollResult.textContent = `You rolled: ${selectedItem}${spookyNote}`;
+      chanceAndLuck.textContent = `Chance: ${itemChance}% | Luck Added: ${luckAdded}x`;
+      totalLuck = Math.round(totalLuck * 10) / 10;
+      totalRolls++;
+      totalLuckDisplay.textContent = `Total Luck: ${totalLuck}`;
+      totalRollsDisplay.textContent = `Total Rolls: ${totalRolls}`;
+      updateInventory();
+      
+      // Apply glow effects. Haunted rolls always use the haunted glow.
+      if (isHaunted) {
+        rollingArea.classList.add('glow-haunted');
+      } else {
+        rollingArea.classList.add(`glow-${itemRarity.toLowerCase()}`);
+      }
+      
+      // Apply scaling effect for rare results in standard rolls.
+      if (!isHaunted && ['Legendary', 'Mythical', 'Secret'].includes(itemRarity)) {
+        rollResult.classList.add('rare-effect');
+        setTimeout(() => {
+          rollResult.classList.remove('rare-effect');
+        }, 1000);
+      }
+    }
+    
+    // Click handler for standard roll
+    rollButton.addEventListener('click', () => {
+      if (rolling) return;
+      rolling = true;
+      rollButton.disabled = true;
+      hauntedRollButton.disabled = true;
+      
+      // Remove all glow classes before new roll
+      rollingArea.classList.remove(
+        'glow-mythical', 
+        'glow-legendary', 
+        'glow-epic', 
+        'glow-rare', 
+        'glow-uncommon', 
+        'glow-common', 
+        'glow-secret', 
+        'glow-haunted'
+      );
+    
+      setTimeout(() => {
+        performRoll(false);
+        rolling = false;
+        rollButton.disabled = false;
+        hauntedRollButton.disabled = false;
+      }, 2000);
+    });
+    
+    // Click handler for haunted roll
+    hauntedRollButton.addEventListener('click', () => {
+      if (rolling) return;
+      if (totalLuck < 150) {
+        alert("You don't have enough luck for a Haunted Roll! (Need at least 150 luck)");
+        return;
+      }
+      // Deduct 150 luck for haunted roll
+      totalLuck -= 150;
+      totalLuckDisplay.textContent = `Total Luck: ${totalLuck}`;
+    
+      rolling = true;
+      rollButton.disabled = true;
+      hauntedRollButton.disabled = true;
+      
+      // Remove all glow classes before new roll
+      rollingArea.classList.remove(
+        'glow-mythical', 
+        'glow-legendary', 
+        'glow-epic', 
+        'glow-rare', 
+        'glow-uncommon', 
+        'glow-common', 
+        'glow-secret', 
+        'glow-haunted'
+      );
+    
+      setTimeout(() => {
+        performRoll(true);
+        rolling = false;
+        rollButton.disabled = false;
+        hauntedRollButton.disabled = false;
+      }, 2000);
+    });
+    
+    // Existing auto roll purchase handler with fix and new stop button
+    const autoRollCost = 250;
+
+    autoRollButton.addEventListener('click', () => {
+      if (rolling) return;
+      if (totalLuck < autoRollCost) {
+        alert("Not enough luck to buy auto roll!");
+        return;
+      }
+      // Deduct cost
+      totalLuck -= autoRollCost;
+      totalLuckDisplay.textContent = `Total Luck: ${totalLuck}`;
+
+      // Disable buy button
+      autoRollButton.disabled = true;
+      autoRollButton.textContent = "Auto Roll Active";
+
+      // Show stop button
+      stopAutoRollButton.style.display = 'inline-block';
+
+      // Start auto rolling every 3 seconds
+      autoRollInterval = setInterval(() => {
+        if (!rolling) {
+          rolling = true;
+          // Remove glow classes
+          rollingArea.classList.remove(
+            'glow-mythical', 
+            'glow-legendary', 
+            'glow-epic', 
+            'glow-rare', 
+            'glow-uncommon', 
+            'glow-common', 
+            'glow-secret', 
+            'glow-haunted'
+          );
+          setTimeout(() => {
+            performRoll(false);
+            rolling = false;
+          }, 2000);
+        }
+      }, 3000);
+    });
+
+    // Handle stop auto-roll button
+    stopAutoRollButton.addEventListener('click', () => {
+      clearInterval(autoRollInterval);
+      autoRollInterval = null;
+      // Hide stop button
+      stopAutoRollButton.style.display = 'none';
+      // Re-enable buy button
+      autoRollButton.disabled = false;
+      autoRollButton.textContent = 'Buy Auto Roll (250 Luck)';
+    });
+  </script>
+</body>
+</html>
